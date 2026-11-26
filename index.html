@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>杨昊行动 | OPERATION YANGHAO — CET-4 战术词汇行动</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230a1016'/%3E%3Ctext x='32' y='47' font-size='40' text-anchor='middle' fill='%23ffab3d'%3E%E2%97%88%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="scene"></canvas>
+  <div class="fx vignette"></div>
+  <div class="fx scanlines"></div>
+  <div class="fx grain"></div>
+
+  <!-- ==================== HUD ==================== -->
+  <div id="hud" class="hidden">
+    <div class="hud-tl">
+      <div class="op-tag"><span class="live-dot"></span> OPERATION YANGHAO <em>// 杨昊行动</em></div>
+      <div class="mission-box">
+        <div class="label">当前任务 / OBJECTIVE</div>
+        <div class="mission-line"><span class="idx">01</span><span>搜索补给箱，破解四级词汇获取金币</span></div>
+        <div class="mission-line"><span class="idx">02</span><span>定位「渡鸦」灯，按 <kbd>F</kbd> 开启赌局</span></div>
+        <div class="progress-wrap"><div class="progress-bar" id="intel-bar"></div></div>
+        <div class="progress-meta"><span>情报收集进度</span><span id="intel-text">0 / 20</span></div>
+      </div>
+    </div>
+
+    <div class="hud-tr">
+      <div class="coin-box">
+        <div class="coin-icon">◈</div>
+        <div class="coin-meta"><div class="label">战术金币 / CREDITS</div><div class="coin-num" id="coin-num">0</div></div>
+      </div>
+      <div class="streak-box" id="streak-box"><span>连击</span><b id="streak-num">0</b><span class="combo">COMBO</span></div>
+    </div>
+
+    <div id="crosshair"><span class="ch-dot"></span><i class="ch-t"></i><i class="ch-b"></i><i class="ch-l"></i><i class="ch-r"></i></div>
+
+    <div id="prompt" class="hidden">
+      <div class="key">F</div>
+      <div class="prompt-text"><b id="prompt-title">搜索补给箱</b><span id="prompt-sub">按 F 进行交互</span></div>
+      <div class="prompt-range" id="prompt-range"></div>
+    </div>
+
+    <div class="hud-bl">
+      <div class="label">行动战绩 / AFTER ACTION</div>
+      <div class="stat-row"><span>解密成功</span><b id="stat-correct">0</b></div>
+      <div class="stat-row"><span>拼写失误</span><b id="stat-wrong">0</b></div>
+      <div class="stat-row"><span>掌握词条</span><b id="stat-learned">0</b></div>
+      <div class="stat-row"><span>渡鸦胜率</span><b id="stat-bet">—</b></div>
+      <div class="stat-row violet"><span>渡鸦连胜</span><b id="stat-betstreak">0</b></div>
+    </div>
+
+    <div class="hud-br">
+      <div class="map-frame"><canvas id="minimap" width="184" height="184"></canvas><div class="map-label">TAC-MAP / 渡鸦定位</div></div>
+      <div class="controls-hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移动 &nbsp;·&nbsp; 鼠标 视角 &nbsp;·&nbsp; <kbd>SHIFT</kbd> 冲刺 &nbsp;·&nbsp; <kbd>F</kbd> 交互 &nbsp;·&nbsp; <kbd>ESC</kbd> 暂停</div>
+    </div>
+
+    <div id="toasts"></div>
+    <div id="coin-float"></div>
+  </div>
+
+  <!-- ==================== 开始简报 ==================== -->
+  <div id="screen-start" class="screen">
+    <div class="start-grid"></div>
+    <div class="screen-inner">
+      <div class="start-top"><span class="bar"></span> TACTICAL VOCAB OPS &nbsp;//&nbsp; CET-4 FIELD TRAINING SIM <span class="bar"></span></div>
+      <div class="start-crest">◈</div>
+      <h1 class="start-title">杨昊行动</h1>
+      <div class="start-sub">OPERATION <span>YANGHAO</span></div>
+      <p class="brief">
+        夜间补给站已清空。你的任务：逐箱搜索情报，把散落的四级词汇逐一破译。<br>
+        每拼对一个词条，指挥部下发的战术金币就会入账。若拼错，系统将直接给出正确答案。<br>
+        场地深处有一盏名为 <b>「渡鸦」</b> 的紫光灯 —— 找到它，按 <kbd>F</kbd> 下注，用你的词汇量去赌一把随机倍率。
+      </p>
+      <div class="brief-grid">
+        <div class="brief-card"><div class="bc-num">01</div><div class="bc-title">搜索补给箱</div><div class="bc-desc">靠近发光补给箱按 F，听发音后从四个选项中选出正确拼写，选对得金币。</div></div>
+        <div class="brief-card"><div class="bc-num">02</div><div class="bc-title">拼错不白跑</div><div class="bc-desc">系统立即公布正确答案、音标与释义，顺便记住它。</div></div>
+        <div class="brief-card violet"><div class="bc-num">03</div><div class="bc-title">渡鸦赌局</div><div class="bc-desc">投入金币开局，限时拼词。答对随机 2~6 倍返还，连赢每多一局再加 0.5×（最高 +2×）；答错本金归零。</div></div>
+      </div>
+      <button id="btn-start" class="btn-primary big">▶ &nbsp; 开始行动 / DEPLOY</button>
+      <div class="start-meta">
+        <span>词库 <b id="word-count">0</b> 条 CET-4 核心词</span><span class="sep">/</span>
+        <span>进度自动保存于本机</span><span class="sep">/</span>
+        <span>若鼠标未锁定：按住左键拖动即可转动视角</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 暂停 ==================== -->
+  <div id="screen-pause" class="screen hidden">
+    <div class="pause-card">
+      <div class="label">STATUS // 行动暂停</div>
+      <h2>PAUSED</h2>
+      <p>战场已冻结。点击下方按钮重新进入指针锁定。</p>
+      <button id="btn-resume" class="btn-primary big">继续行动</button>
+      <div class="pause-row">
+        <button id="btn-vocab" class="btn-ghost">查看已掌握词条</button>
+        <button id="btn-sound" class="btn-ghost">声音：开</button>
+        <button id="btn-reset" class="btn-ghost danger">重置存档</button>
+      </div>
+      <div class="pause-tip">提示：找不到渡鸦灯时，看右下角战术地图的紫色菱形标记。</div>
+    </div>
+  </div>
+
+  <!-- ==================== 补给箱挑战 ==================== -->
+  <div id="modal-crate" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="head-icon amber">▣</div>
+        <div class="head-txt"><div class="label">SUPPLY CACHE / 补给箱</div><h3>词汇解密</h3></div>
+        <div class="head-id" id="crate-id">#A-01</div>
+      </div>
+      <div id="crate-body"></div>
+      <div class="modal-foot"><span id="crate-foot">点击选项，或按数字键 1~4 作答</span><button id="crate-close" class="btn-primary">收起装备 / 继续行动</button></div>
+    </div>
+  </div>
+
+  <!-- ==================== 渡鸦赌局 ==================== -->
+  <div id="modal-raven" class="modal hidden">
+    <div class="modal-card raven-card">
+      <div class="modal-head">
+        <div class="head-icon violet">◆</div>
+        <div class="head-txt"><div class="label">RAVEN / 渡鸦灯</div><h3>高风险赌局</h3></div>
+        <div class="head-id violet">BET</div>
+      </div>
+      <div id="raven-body"></div>
+      <div class="modal-foot"><span id="raven-foot">答对随机 2~6 倍 + 连赢加成 · 答错失去本金</span><button id="raven-close" class="btn-primary">离开赌局 / 继续行动</button></div>
+    </div>
+  </div>
+
+  <!-- ==================== 词库面板 ==================== -->
+  <div id="modal-vocab" class="modal hidden">
+    <div class="modal-card vocab-card">
+      <div class="modal-head">
+        <div class="head-icon cyan">▤</div>
+        <div class="head-txt"><div class="label">INTEL ARCHIVE / 情报档案</div><h3>已掌握词条</h3></div>
+        <div class="head-id" id="vocab-count">0</div>
+      </div>
+      <div id="vocab-body"></div>
+      <div class="modal-foot"><span>拼对即收录，拼错后会展示正确答案供复习</span><button id="vocab-close" class="btn-primary">关闭档案</button></div>
+    </div>
+  </div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="js/words.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/world.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
